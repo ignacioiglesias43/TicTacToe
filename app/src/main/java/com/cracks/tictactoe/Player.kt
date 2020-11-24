@@ -32,4 +32,11 @@ class Player {
     fun setPositions(newList: MutableList<Int>) {
         this.positions = newList
     }
+
+    fun isWinner(): Boolean {
+        for(position in positions) {
+
+        }
+        return true
+    }
 }

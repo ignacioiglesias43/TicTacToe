@@ -5,10 +5,9 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.activity_main.view.*
-import java.util.*
 
 class MainActivity : AppCompatActivity() {
+    var turn = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,9 +19,7 @@ class MainActivity : AppCompatActivity() {
         /*2. Evaluar el tablero tras cada jugada */
 
         val selectedBtn = view as Button
-        var btnID = getBtnID(selectedBtn)
-        selectedBtn.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_close_24, 0, 0, 0)
-
+        initGame(selectedBtn)
     }
 
     private fun getBtnID(btnInstance: Button): Int {
@@ -38,5 +35,32 @@ class MainActivity : AppCompatActivity() {
             button9 -> return 9
         }
         return 0
+    }
+
+    /*TODO Terminar de validar el juego*/
+    private fun initGame(selectedBtn: Button) {
+        val playerOne = Player("Hunter", "X")
+        val playerTwo = Player("Morgana", "O")
+        var btnID = getBtnID(selectedBtn)
+
+        selectedBtn.isEnabled = false
+        turn = if(turn == 1) {
+            playerOne.getPositions().add(btnID)
+            setIconResource(playerOne.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
+            2
+        } else {
+            setIconResource(playerTwo.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
+            playerTwo.getPositions().add(btnID)
+            1
+        }
+
+        playerOne.isWinner()
+    }
+
+    private fun setIconResource(token: String, button: Button) {
+        when(token) {
+            "X" -> {button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_close_24,0,0,0)}
+            "O" -> {button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_radio_button_unchecked_24,0,0,0)}
+        }
     }
 }
