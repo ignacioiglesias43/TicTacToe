@@ -21,7 +21,8 @@
             android:layout_height="45pt"
             android:layout_margin="4pt"
             android:onClick="buttonClick"
-            app:backgroundTint="@color/accent" />
+            app:backgroundTint="@color/accent"
+            />
 
         <Button
             android:id="@+id/button2"
