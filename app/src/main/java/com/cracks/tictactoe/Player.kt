@@ -1,5 +1,7 @@
 package com.cracks.tictactoe
 
+import android.util.Log
+
 enum class PlayerAttribute {
     NAME, TOKEN
 }
@@ -13,6 +15,10 @@ class Player {
         this.name = name
         this.token = token
         this.positions = mutableListOf()
+    }
+
+    fun addPosition(position: Int){
+        this.positions.add(position);
     }
 
     fun getAttribute(type: PlayerAttribute) = when(type) {
@@ -34,9 +40,14 @@ class Player {
     }
 
     fun isWinner(): Boolean {
-        for(position in positions) {
+        if(positions.contains(1) && positions.contains(5) && positions.contains(9)) return true;
+        if(positions.contains(3) && positions.contains(5) && positions.contains(7)) return true;
 
+        for(position in positions) {
+            Log.println(Log.INFO,"GG", "S: $position");
+            if(position%3==0) if(positions.contains(position-1) && positions.contains(position-2)) return true;
+            if(position<4) if(positions.contains(position+3) && positions.contains(position+6)) return true;
         }
-        return true
+        return false;
     }
 }

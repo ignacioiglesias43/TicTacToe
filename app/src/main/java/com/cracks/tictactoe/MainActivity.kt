@@ -2,15 +2,20 @@ package com.cracks.tictactoe
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
     var turn = 1
+    var playerOne: Player = Player("Hunter", "X")
+    var playerTwo: Player = Player("Morgana", "O")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
     }
 
@@ -19,7 +24,7 @@ class MainActivity : AppCompatActivity() {
         /*2. Evaluar el tablero tras cada jugada */
 
         val selectedBtn = view as Button
-        initGame(selectedBtn)
+        initGame(selectedBtn, view)
     }
 
     private fun getBtnID(btnInstance: Button): Int {
@@ -38,23 +43,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     /*TODO Terminar de validar el juego*/
-    private fun initGame(selectedBtn: Button) {
-        val playerOne = Player("Hunter", "X")
-        val playerTwo = Player("Morgana", "O")
+    private fun initGame(selectedBtn: Button, view: View) {
         var btnID = getBtnID(selectedBtn)
 
         selectedBtn.isEnabled = false
         turn = if(turn == 1) {
-            playerOne.getPositions().add(btnID)
+            playerOne.addPosition(btnID);
             setIconResource(playerOne.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
             2
         } else {
+            playerTwo.addPosition(btnID);
             setIconResource(playerTwo.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
-            playerTwo.getPositions().add(btnID)
             1
         }
 
-        playerOne.isWinner()
+        if(playerOne.isWinner()){
+            val snack = Snackbar.make(view,"Gano el uno", Snackbar.LENGTH_LONG);
+            snack.show();
+        }
+        if(playerTwo.isWinner()){
+            val snack = Snackbar.make(view,"Gano el dos", Snackbar.LENGTH_LONG);
+            snack.show();
+        }
     }
 
     private fun setIconResource(token: String, button: Button) {
