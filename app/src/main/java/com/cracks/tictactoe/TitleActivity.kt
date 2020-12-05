@@ -14,15 +14,34 @@ class TitleActivity : AppCompatActivity() {
         setContentView(R.layout.activity_title)
     }
 
-    fun goGame(view: View){
+    fun searchGame(view: View){
         val name = editTextName.text.toString();
-        if(name.trim().isNotEmpty()){
+        if (validate(name, view)){
             val intent = Intent(this, MainActivity::class.java).apply {
                 putExtra("player", name);
+                putExtra("type", 'O');
             }
             startActivity(intent);
+        }
+    }
+
+    fun createGame(view: View){
+        val name = editTextName.text.toString();
+        if (validate(name, view)){
+            val intent = Intent(this, MainActivity::class.java).apply {
+                putExtra("player", name);
+                putExtra("type", 'X');
+            }
+            startActivity(intent);
+        }
+    }
+
+    fun validate(name: String, view: View): Boolean{
+        if(name.trim().isNotEmpty()){
+            return true
         }else{
             Snackbar.make(view,"Ingrese un nombre por favor", Snackbar.LENGTH_LONG).show();
+            return false;
         }
     }
 }

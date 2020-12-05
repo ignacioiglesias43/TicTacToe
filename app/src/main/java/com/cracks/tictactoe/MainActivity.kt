@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 
@@ -27,11 +28,11 @@ class MainActivity : AppCompatActivity() {
     fun buttonClick(view: View) {
         /*1. Manejar el evento tap */
         /*2. Evaluar el tablero tras cada jugada */
-        val selectedBtn = view as Button
+        val selectedBtn = view as ImageButton
         initGame(selectedBtn, view)
     }
 
-    private fun getBtnID(btnInstance: Button): Int {
+    private fun getBtnID(btnInstance: ImageButton): Int {
         when (btnInstance) {
             button1 -> return 1
             button2 -> return 2
@@ -46,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         return 0
     }
 
-    private fun getBtnInstance(btnID: Int): Button? {
+    private fun getBtnInstance(btnID: Int): ImageButton? {
         when (btnID) {
             1 -> return button1
             2 -> return button2
@@ -61,7 +62,7 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
-    private fun initGame(selectedBtn: Button, view: View) {
+    private fun initGame(selectedBtn: ImageButton, view: View) {
         var btnID = getBtnID(selectedBtn)
         val builder = AlertDialog.Builder(this)
         builder.setMessage("¿Deseas volver a jugar?")
@@ -103,13 +104,13 @@ class MainActivity : AppCompatActivity() {
         for(pos in pos1) {
             val btn = getBtnInstance(pos)
             btn?.isEnabled = true
-            btn?.setCompoundDrawablesWithIntrinsicBounds(0, 0,0,0)
+            btn?.setImageResource(android.R.color.transparent)
         }
 
         for(pos in pos2) {
             val btn = getBtnInstance(pos)
             btn?.isEnabled = true
-            btn?.setCompoundDrawablesWithIntrinsicBounds(0, 0,0,0)
+            btn?.setImageResource(android.R.color.transparent)
         }
         pos1.clear()
         pos2.clear()
@@ -122,10 +123,10 @@ class MainActivity : AppCompatActivity() {
         actualPlayerText.text = turnText;
     }
 
-    private fun setIconResource(token: String, button: Button) {
+    private fun setIconResource(token: String, button: ImageButton) {
         when(token) {
-            "X" -> {button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_close_24,0,0,0)}
-            "O" -> {button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_radio_button_unchecked_24,0,0,0)}
+            "X" -> {button.setImageResource(R.drawable.ic_baseline_close_24)}
+            "O" -> {button.setImageResource(R.drawable.ic_baseline_radio_button_unchecked_24)}
         }
     }
 }
