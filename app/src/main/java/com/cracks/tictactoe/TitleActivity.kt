@@ -18,11 +18,11 @@ class TitleActivity : AppCompatActivity() {
         val name = editTextName.text.toString();
         if(name.trim().isNotEmpty()){
             val intent = Intent(this, MainActivity::class.java).apply {
-                putExtra("player", name)
+                putExtra("player", name);
             }
             startActivity(intent);
         }else{
-            Snackbar.make(view,"Ingrese un nombre por favor", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(view,"Ingrese un nombre por favor", Snackbar.LENGTH_LONG).show();
         }
     }
 }
