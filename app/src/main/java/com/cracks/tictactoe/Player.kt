@@ -41,11 +41,12 @@ class Player {
 
     fun isWinner(): Boolean {
         for(position in positions) {
-            Log.println(Log.INFO,"GG", "S: $position")
+            Log.println(Log.INFO, "A", "$position");
             if(position%3==0) if(positions.contains(position-1) && positions.contains(position-2)) return true
             if(position<4) if(positions.contains(position+3) && positions.contains(position+6)) return true
         }
-        return (positions.contains(1) && positions.contains(5) && positions.contains(9))
-                || (positions.contains(3) && positions.contains(5) && positions.contains(7))
+        if( (positions.contains(1) && positions.contains(5) && positions.contains(9)) || (positions.contains(3) && positions.contains(5) && positions.contains(7)) )
+            return true
+        return false;
     }
 }

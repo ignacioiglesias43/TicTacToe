@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import androidx.annotation.RequiresApi
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import com.google.firebase.dynamiclinks.ktx.androidParameters
@@ -23,7 +24,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class TitleActivity : AppCompatActivity() {
-    private var uniqueCode: String? = null
     private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,35 +38,34 @@ class TitleActivity : AppCompatActivity() {
         if (name.trim().isNotEmpty() && code.trim().isNotEmpty()) {
             val data = hashMapOf("player_two" to name)
 
-            db.collection("games").document("$code-$uniqueCode")
+            db.collection("games").document("$code")
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener {
-                    playGame(true)
+                    playGame(true, code)
                 }
                 .addOnFailureListener { e ->
                     Snackbar.make(view, "Hubo un error al iniciar la partida", Snackbar.LENGTH_LONG).show()
                     Log.w("Error ", "Error adding document", e)
                 }
         } else {
-            Snackbar.make(view, "Ingrese un nombre por favor", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(view, "Ingrese un nombre y el código, por favor", Snackbar.LENGTH_LONG).show()
         }
     }
 
     fun createGame(view: View) {
         val name = editTextName.text.toString().trim()
-        val code = editTextCode.text.toString().trim()
+        val code = generateCode();
         if (name.trim().isNotEmpty() && code.trim().isNotEmpty()) {
             val game = hashMapOf(
                     "player_one" to name,
-                    "turn_of" to name
+                    "turn_of" to "X"
             )
-            uniqueCode = uniqueId()
             db.collection("games")
-                    .document("$code-$uniqueCode")
+                    .document("$code")
                     .set(game)
                     .addOnSuccessListener {
-                        generateDynamicLink(view)
-                        playGame(false)
+                        generateDynamicLink(view, code)
+                        playGame(false, code)
                         Log.d("Done", "DocumentSnapshot successfully written!")
                     }
                     .addOnFailureListener { e ->
@@ -74,17 +73,16 @@ class TitleActivity : AppCompatActivity() {
                         Log.w("Error ", "Error adding document", e)
                     }
         } else {
-            Snackbar.make(view, "Ingrese un nombre por favor", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(view, "Ingrese un nombre, por favor", Snackbar.LENGTH_LONG).show()
         }
     }
 
     /* Esta funcion genera el link */
-    private fun generateDynamicLink(view: View) {
+    private fun generateDynamicLink(view: View, code: String) {
         val name = editTextName.text.toString()
-        val code = editTextCode.text.toString()
 
         Firebase.dynamicLinks.shortLinkAsync {
-            link = Uri.parse("https://cracks.page.link?unique_code=$uniqueCode&code=$code")
+            link = Uri.parse("https://cracks.page.link?&code=$code")
             domainUriPrefix = "https://cracks.page.link"
             androidParameters("com.cracks.tictactoe") {
                 minimumVersion = 125
@@ -122,11 +120,11 @@ class TitleActivity : AppCompatActivity() {
                         deepLink = pendingDynamicLinkData.link
 
                         if (deepLink != null) {
-                            val uniqueCode = deepLink.getQueryParameter("unique_code")
+                            //val uniqueCode = deepLink.getQueryParameter("unique_code")
                             val gameCode = deepLink.getQueryParameter("code")
-                            if (uniqueCode != null && gameCode != null) {
+                            if (gameCode != null) {
                                 editTextCode.setText(gameCode)
-                                this.uniqueCode = uniqueCode
+                                //this.uniqueCode = uniqueCode
                             }
                         }
                     } else {
@@ -137,9 +135,8 @@ class TitleActivity : AppCompatActivity() {
     }
 
     /* Funcion para iniciar el juego, envia los datos del nombre de cada jugador y su token */
-    private fun playGame(isSearch: Boolean) {
+    private fun playGame(isSearch: Boolean, code: String) {
         val name = editTextName.text.toString()
-        val code = editTextCode.text.toString()
 
         val playerType = if (isSearch) "O" else "X"
         val rivalType = if (isSearch) "X" else "O"
@@ -148,11 +145,19 @@ class TitleActivity : AppCompatActivity() {
             putExtra("player_name", name)
             putExtra("player_type", playerType)
             putExtra("rival_type", rivalType)
-            putExtra("code", "$code-$uniqueCode")
+            putExtra("code", "$code")
         }
         startActivity(intent)
     }
 
-    /* Generar un codigo aleatorio */
-    private fun uniqueId():String = UUID.randomUUID().toString()
+    //Genera el código del juego
+    private fun generateCode(): String{
+        val charPool : List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+        val code = (1..5)
+                .map {i -> kotlin.random.Random.nextInt(0, charPool.size) }
+                .map(charPool::get)
+                .joinToString("");
+        return code;
+    }
+
 }
