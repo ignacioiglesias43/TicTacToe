@@ -7,8 +7,9 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ImageButton
-import androidx.activity.OnBackPressedDispatcher
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -34,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayers() {
-        val loadingDialog = LoadingDialog(this)
+        val loadingDialog = LoadingDialog(this, "Esperando respuesta del invitado...")
         loadingDialog.startLoadingAnimation()
         localPlayer.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player_name")!!)
         localPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("player_type")!!)
@@ -47,7 +48,7 @@ class MainActivity : AppCompatActivity() {
                 Log.w("TAG", "Listen failed.", e)
                 return@addSnapshotListener
             }
-
+            /* Se supone que esta funcion snapShot espera por actualizaciones en tiempo real, si funca para detectar cuando llega el usuario invitado */
             if (snapshot != null && snapshot.exists()) {
                 Log.d("TAG", "Current data: ${snapshot.data}")
                 if(snapshot.data!!.isNotEmpty()) {
@@ -62,13 +63,30 @@ class MainActivity : AppCompatActivity() {
                             loadingDialog.dismiss()
                         }
                     }
+                    /* Esto no funca :v */
+                    if(snapshot.data!!.containsKey("player_one_move")) {
+                        printMove(localPlayer, snapshot.data?.get("player_one_move").toString() as Int)
+                    }
+
+                    if(snapshot.data!!.containsKey("player_two_move")) {
+                        printMove(rivalPlayer, snapshot.data?.get("player_two_move").toString() as Int)
+                    }
 
                     turn = snapshot.data?.get("turn_of").toString()
+                    showTurn()
                 }
             } else {
                 Log.d("TAG", "Current data: null")
             }
         }
+    }
+/* No funca*/
+    private fun printMove(player: Player, move: Int) {
+        val btn = getBtnInstance(move)
+        val loadingDialog = LoadingDialog(this)
+        loadingDialog.startLoadingAnimation()
+        setIconResource(player.getAttribute(PlayerAttribute.TOKEN), btn!!)
+        loadingDialog.dismiss()
     }
 
     fun buttonClick(view: View) {
@@ -110,22 +128,42 @@ class MainActivity : AppCompatActivity() {
 
     private fun initGame(selectedBtn: ImageButton, view: View) {
         var btnID = getBtnID(selectedBtn)
+        val key = if(turn == localPlayer.getAttribute(PlayerAttribute.NAME)) "player_one_move" else "player_two_move"
         val builder = AlertDialog.Builder(this)
         builder.setMessage("¿Deseas volver a jugar?")
         builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> reset() }
         builder.setNegativeButton("No") { _: DialogInterface, _: Int -> finish() }
 
         selectedBtn.isEnabled = false
-        turn = if(turn == "1") {
-            localPlayer.addPosition(btnID)
-            setIconResource(localPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
-            "2"
-        } else {
-            rivalPlayer.addPosition(btnID)
-            setIconResource(rivalPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
-            "1"
-        }
-        showTurn();
+        var data = hashMapOf(key to btnID.toString())
+
+        /* Creo que aquí es donde se rompe */
+
+        db.collection("games").document(code!!)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener {
+                    turn = if(turn == localPlayer.getAttribute(PlayerAttribute.NAME)) {
+                        localPlayer.addPosition(btnID)
+                        setIconResource(localPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
+                        rivalPlayer.getAttribute(PlayerAttribute.NAME)
+                    } else {
+                        rivalPlayer.addPosition(btnID)
+                        setIconResource(rivalPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
+                        localPlayer.getAttribute(PlayerAttribute.NAME)
+                    }
+                    showTurn()
+                    data = hashMapOf("turn_of" to turn)
+                    db.collection("games").document(code!!)
+                            .set(data, SetOptions.merge())
+                            .addOnFailureListener { e ->
+                                Snackbar.make(view, "Hubo un error al cargar su movimiento", Snackbar.LENGTH_LONG).show()
+                                Log.w("Error ", "Error adding document", e)
+                            }
+                }
+                .addOnFailureListener { e ->
+                    Snackbar.make(view, "Hubo un error al cargar su movimiento", Snackbar.LENGTH_LONG).show()
+                    Log.w("Error ", "Error adding document", e)
+                }
         when {
             localPlayer.isWinner() -> {
                 builder.setTitle("Ganador: ${localPlayer.getAttribute(PlayerAttribute.NAME)}")
@@ -164,8 +202,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTurn() {
-        val turnText = if(turn == "1") localPlayer.getAttribute(PlayerAttribute.NAME) else rivalPlayer.getAttribute(PlayerAttribute.NAME);
-        actualPlayerText.text = turnText;
+        val turnText = if(turn == localPlayer.getAttribute(PlayerAttribute.NAME)) localPlayer.getAttribute(PlayerAttribute.NAME) else rivalPlayer.getAttribute(PlayerAttribute.NAME)
+        actualPlayerText.text = turnText
     }
 
     private fun setIconResource(token: String, button: ImageButton) {
