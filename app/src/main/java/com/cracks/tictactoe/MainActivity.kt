@@ -12,7 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-    private var turn = 1
+    private var turn = "1"
     private var localPlayer: Player = Player("Hunter", "X")
     private var rivalPlayer: Player = Player("Morgana", "O")
     private var code: String? = null
@@ -34,6 +34,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayers() {
+        val loadingDialog = LoadingDialog(this)
+        loadingDialog.startLoadingAnimation()
         localPlayer.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player_name")!!)
         localPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("player_type")!!)
         rivalPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("rival_type")!!)
@@ -52,13 +54,16 @@ class MainActivity : AppCompatActivity() {
                     if(localPlayer.getAttribute(PlayerAttribute.TOKEN) == "X") {
                         if(snapshot.data!!.containsKey("player_two")) {
                             rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_two").toString())
+                            loadingDialog.dismiss()
                         }
                     } else {
                         if(snapshot.data!!.containsKey("player_one")){
                             rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_one").toString())
+                            loadingDialog.dismiss()
                         }
                     }
-                    turn = snapshot.data?.get("turn_of") as Int
+
+                    turn = snapshot.data?.get("turn_of").toString()
                 }
             } else {
                 Log.d("TAG", "Current data: null")
@@ -111,14 +116,14 @@ class MainActivity : AppCompatActivity() {
         builder.setNegativeButton("No") { _: DialogInterface, _: Int -> finish() }
 
         selectedBtn.isEnabled = false
-        turn = if(turn == 1) {
+        turn = if(turn == "1") {
             localPlayer.addPosition(btnID)
             setIconResource(localPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
-            2
+            "2"
         } else {
             rivalPlayer.addPosition(btnID)
             setIconResource(rivalPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
-            1
+            "1"
         }
         showTurn();
         when {
@@ -159,7 +164,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTurn() {
-        val turnText = if(turn == 1) localPlayer.getAttribute(PlayerAttribute.NAME) else rivalPlayer.getAttribute(PlayerAttribute.NAME);
+        val turnText = if(turn == "1") localPlayer.getAttribute(PlayerAttribute.NAME) else rivalPlayer.getAttribute(PlayerAttribute.NAME);
         actualPlayerText.text = turnText;
     }
 

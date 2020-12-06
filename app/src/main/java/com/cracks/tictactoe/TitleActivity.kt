@@ -58,7 +58,7 @@ class TitleActivity : AppCompatActivity() {
         if (name.trim().isNotEmpty() && code.trim().isNotEmpty()) {
             val game = hashMapOf(
                     "player_one" to name,
-                    "turn_of" to 1
+                    "turn_of" to "1"
             )
             uniqueCode = uniqueId()
             db.collection("games")
