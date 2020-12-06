@@ -7,28 +7,32 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
     var turn = 1
+    private val player: Player = Player("player", "X");
     var playerOne: Player = Player("Hunter", "X")
     var playerTwo: Player = Player("Morgana", "O")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_main)
+
+        player.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player")!!);
+        showTurn();
     }
 
     fun buttonClick(view: View) {
         /*1. Manejar el evento tap */
         /*2. Evaluar el tablero tras cada jugada */
-        val selectedBtn = view as Button
+        val selectedBtn = view as ImageButton
         initGame(selectedBtn, view)
     }
 
-    private fun getBtnID(btnInstance: Button): Int {
+    private fun getBtnID(btnInstance: ImageButton): Int {
         when (btnInstance) {
             button1 -> return 1
             button2 -> return 2
@@ -43,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         return 0
     }
 
-    private fun getBtnInstance(btnID: Int): Button? {
+    private fun getBtnInstance(btnID: Int): ImageButton? {
         when (btnID) {
             1 -> return button1
             2 -> return button2
@@ -58,17 +62,17 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
-    private fun initGame(selectedBtn: Button, view: View) {
+    private fun initGame(selectedBtn: ImageButton, view: View) {
         var btnID = getBtnID(selectedBtn)
         val builder = AlertDialog.Builder(this)
         builder.setMessage("¿Deseas volver a jugar?")
         builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> reset() }
-        builder.setNegativeButton("No") { _: DialogInterface, _: Int -> Log.println(Log.INFO,"GG", "ok") }
+        builder.setNegativeButton("No") { _: DialogInterface, _: Int -> finish() }
+
         /* TODO: Modificar la interfaz para mostrar un label con el turno actual */
-        showTurn(view)
         selectedBtn.isEnabled = false
         turn = if(turn == 1) {
-            playerOne.addPosition(btnID)
+            player.addPosition(btnID)
             setIconResource(playerOne.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
             2
         } else {
@@ -76,17 +80,17 @@ class MainActivity : AppCompatActivity() {
             setIconResource(playerTwo.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
             1
         }
-
+        showTurn();
         when {
-            playerOne.isWinner() -> {
-                builder.setTitle("Ganador: ${playerOne.getAttribute(PlayerAttribute.NAME)}")
+            player.isWinner() -> {
+                builder.setTitle("Ganador: ${player.getAttribute(PlayerAttribute.NAME)}")
                 builder.show()
             }
             playerTwo.isWinner() -> {
                 builder.setTitle("Ganador: ${playerTwo.getAttribute(PlayerAttribute.NAME)}")
                 builder.show()
             }
-            playerOne.getPositions().size + playerTwo.getPositions().size == 9 -> {
+            player.getPositions().size + playerTwo.getPositions().size == 9 -> {
                 builder.setTitle("Empate")
                 builder.show()
             }
@@ -94,19 +98,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun reset() {
-        val pos1 = playerOne.getPositions()
+        val pos1 = player.getPositions()
         val pos2 = playerTwo.getPositions()
 
         for(pos in pos1) {
             val btn = getBtnInstance(pos)
             btn?.isEnabled = true
-            btn?.setCompoundDrawablesWithIntrinsicBounds(0, 0,0,0)
+            btn?.setImageResource(android.R.color.transparent)
         }
 
         for(pos in pos2) {
             val btn = getBtnInstance(pos)
             btn?.isEnabled = true
-            btn?.setCompoundDrawablesWithIntrinsicBounds(0, 0,0,0)
+            btn?.setImageResource(android.R.color.transparent)
         }
         pos1.clear()
         pos2.clear()
@@ -114,16 +118,15 @@ class MainActivity : AppCompatActivity() {
         playerTwo.setPositions(pos2)
     }
 
-    private fun showTurn(view: View) {
-        val turnText = if(turn == 1) "Hunter" else "Morgana"
-
-        Snackbar.make(view,"Turno de $turnText", Snackbar.LENGTH_LONG).show()
+    private fun showTurn() {
+        val turnText = if(turn == 1) player.getAttribute(PlayerAttribute.NAME) else playerTwo.getAttribute(PlayerAttribute.NAME);
+        actualPlayerText.text = turnText;
     }
 
-    private fun setIconResource(token: String, button: Button) {
+    private fun setIconResource(token: String, button: ImageButton) {
         when(token) {
-            "X" -> {button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_close_24,0,0,0)}
-            "O" -> {button.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_baseline_radio_button_unchecked_24,0,0,0)}
+            "X" -> {button.setImageResource(R.drawable.ic_baseline_close_24)}
+            "O" -> {button.setImageResource(R.drawable.ic_baseline_radio_button_unchecked_24)}
         }
     }
 }
