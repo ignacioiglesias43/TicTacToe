@@ -6,23 +6,64 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Button
 import android.widget.ImageButton
-import com.google.android.material.snackbar.Snackbar
+import androidx.activity.OnBackPressedDispatcher
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-    var turn = 1
-    private val player: Player = Player("player", "X");
-    var playerOne: Player = Player("Hunter", "X")
-    var playerTwo: Player = Player("Morgana", "O")
+    private var turn = 1
+    private var localPlayer: Player = Player("Hunter", "X")
+    private var rivalPlayer: Player = Player("Morgana", "O")
+    private var code: String? = null
+    private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        initPlayers()
+        showTurn()
+    }
 
-        player.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player")!!);
-        showTurn();
+    override fun onBackPressed() {
+        val builder = AlertDialog.Builder(this)
+        builder.setMessage("¿Seguro desea abandonar el juego?")
+        builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> super.onBackPressed() }
+        builder.setNegativeButton("No") { _: DialogInterface, _: Int ->  }
+        builder.show()
+    }
+
+    private fun initPlayers() {
+        localPlayer.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player_name")!!)
+        localPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("player_type")!!)
+        rivalPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("rival_type")!!)
+        code = intent.getStringExtra("code")
+
+        val docRef = db.collection("games").document(this.code!!)
+        docRef.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                Log.w("TAG", "Listen failed.", e)
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                Log.d("TAG", "Current data: ${snapshot.data}")
+                if(snapshot.data!!.isNotEmpty()) {
+                    if(localPlayer.getAttribute(PlayerAttribute.TOKEN) == "X") {
+                        if(snapshot.data!!.containsKey("player_two")) {
+                            rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_two").toString())
+                        }
+                    } else {
+                        if(snapshot.data!!.containsKey("player_one")){
+                            rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_one").toString())
+                        }
+                    }
+                    turn = snapshot.data?.get("turn_of") as Int
+                }
+            } else {
+                Log.d("TAG", "Current data: null")
+            }
+        }
     }
 
     fun buttonClick(view: View) {
@@ -69,28 +110,27 @@ class MainActivity : AppCompatActivity() {
         builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> reset() }
         builder.setNegativeButton("No") { _: DialogInterface, _: Int -> finish() }
 
-        /* TODO: Modificar la interfaz para mostrar un label con el turno actual */
         selectedBtn.isEnabled = false
         turn = if(turn == 1) {
-            player.addPosition(btnID)
-            setIconResource(playerOne.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
+            localPlayer.addPosition(btnID)
+            setIconResource(localPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
             2
         } else {
-            playerTwo.addPosition(btnID)
-            setIconResource(playerTwo.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
+            rivalPlayer.addPosition(btnID)
+            setIconResource(rivalPlayer.getAttribute(PlayerAttribute.TOKEN), selectedBtn)
             1
         }
         showTurn();
         when {
-            player.isWinner() -> {
-                builder.setTitle("Ganador: ${player.getAttribute(PlayerAttribute.NAME)}")
+            localPlayer.isWinner() -> {
+                builder.setTitle("Ganador: ${localPlayer.getAttribute(PlayerAttribute.NAME)}")
                 builder.show()
             }
-            playerTwo.isWinner() -> {
-                builder.setTitle("Ganador: ${playerTwo.getAttribute(PlayerAttribute.NAME)}")
+            rivalPlayer.isWinner() -> {
+                builder.setTitle("Ganador: ${rivalPlayer.getAttribute(PlayerAttribute.NAME)}")
                 builder.show()
             }
-            player.getPositions().size + playerTwo.getPositions().size == 9 -> {
+            localPlayer.getPositions().size + rivalPlayer.getPositions().size == 9 -> {
                 builder.setTitle("Empate")
                 builder.show()
             }
@@ -98,8 +138,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun reset() {
-        val pos1 = player.getPositions()
-        val pos2 = playerTwo.getPositions()
+        val pos1 = localPlayer.getPositions()
+        val pos2 = rivalPlayer.getPositions()
 
         for(pos in pos1) {
             val btn = getBtnInstance(pos)
@@ -114,12 +154,12 @@ class MainActivity : AppCompatActivity() {
         }
         pos1.clear()
         pos2.clear()
-        playerOne.setPositions(pos1)
-        playerTwo.setPositions(pos2)
+        localPlayer.setPositions(pos1)
+        rivalPlayer.setPositions(pos2)
     }
 
     private fun showTurn() {
-        val turnText = if(turn == 1) player.getAttribute(PlayerAttribute.NAME) else playerTwo.getAttribute(PlayerAttribute.NAME);
+        val turnText = if(turn == 1) localPlayer.getAttribute(PlayerAttribute.NAME) else rivalPlayer.getAttribute(PlayerAttribute.NAME);
         actualPlayerText.text = turnText;
     }
 
