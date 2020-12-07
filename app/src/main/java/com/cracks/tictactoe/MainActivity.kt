@@ -28,7 +28,10 @@ class MainActivity : AppCompatActivity() {
     override fun onBackPressed() {
         val builder = AlertDialog.Builder(this)
         builder.setMessage("¿Seguro desea abandonar el juego?")
-        builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> super.onBackPressed() }
+        builder.setPositiveButton("Sí") { _: DialogInterface, _: Int ->
+            exitGame(localPlayer);
+            super.onBackPressed()
+        }
         builder.setNegativeButton("No") { _: DialogInterface, _: Int ->  }
         builder.show()
     }
@@ -44,8 +47,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun initPlayers() {
         val loadingDialog = LoadingDialog(this, "Esperando respuesta del invitado...")
-
         loadingDialog.startLoadingAnimation()
+
         localPlayer.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player_name")!!)
         localPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("player_type")!!)
         rivalPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("rival_type")!!)
@@ -58,17 +61,17 @@ class MainActivity : AppCompatActivity() {
                 Log.w("TAG", "Listen failed.", e)
                 return@addSnapshotListener
             }
-            /* Se supone que esta funcion snapShot espera por actualizaciones en tiempo real, si funca para detectar cuando llega el usuario invitado */
+
             if (snapshot != null && snapshot.exists()) {
                 Log.d("TAG", "Current data: ${snapshot.data}")
                 if(snapshot.data!!.isNotEmpty()) {
                     if(localPlayer.getAttribute(PlayerAttribute.TOKEN) == "X") {
-                        if(snapshot.data!!.containsKey("player_two")) {
+                        if(snapshot.data!!.containsKey("player_two") && snapshot.data?.get("two_status").toString() == "1") {
                             rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_two").toString())
                             loadingDialog.dismiss()
                         }
                     } else {
-                        if(snapshot.data!!.containsKey("player_one")){
+                        if(snapshot.data!!.containsKey("player_one") && snapshot.data?.get("one_status").toString() == "1"){
                             rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_one").toString())
                             loadingDialog.dismiss()
                         }
@@ -77,12 +80,21 @@ class MainActivity : AppCompatActivity() {
                     turn = snapshot.data?.get("turn_of").toString()
                     if(snapshot.data!!.containsKey("move")) {
                         val btn = snapshot.data?.get("move").toString().toInt();
-                        if(localPlayer.getAttribute(PlayerAttribute.TOKEN) == turn){
-                            doMove(rivalPlayer, btn)
-                        }else{
-                            doMove(localPlayer, btn)
+                        if(btn!=0){
+                            if(localPlayer.getAttribute(PlayerAttribute.TOKEN) == turn){
+                                doMove(rivalPlayer, btn)
+                            }else{
+                                doMove(localPlayer, btn)
+                            }
                         }
                     }
+
+                    //Alguno de los dos abandono
+                    if(snapshot.data?.get("two_status").toString() == "0" || snapshot.data?.get("one_status").toString() == "0"){
+                        finish();
+                        Snackbar.make(findViewById(android.R.id.content), "El Rival abandonó la partida", Snackbar.LENGTH_LONG).show()
+                    }
+
                     showTurn()
                 }
             } else {
@@ -95,31 +107,70 @@ class MainActivity : AppCompatActivity() {
     private fun doMove(player: Player, move: Int){
         player.addPosition(move);
         setIconResource(player.getAttribute(PlayerAttribute.TOKEN), getBtnInstance(move)!!)
-        gameOver();
+        validateGame();
     }
 
     //Cada movimiento se valida si alguien ganó
-    private fun gameOver(){
+    private fun validateGame(){
         val builder = AlertDialog.Builder(this)
         builder.setMessage("¿Deseas volver a jugar?")
-        builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> reset() }
-        //TODO Hay que extender el NO para que al jugador A le diga que el jugador B ha abandonado
-        builder.setNegativeButton("No") { _: DialogInterface, _: Int -> finish() }
+        builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> gameOver(localPlayer, 2) }
+        builder.setNegativeButton("No") { _: DialogInterface, _: Int -> gameOver(localPlayer, 0) }
 
         when {
             localPlayer.isWinner() -> {
                 builder.setTitle("Ganador: ${localPlayer.getAttribute(PlayerAttribute.NAME)}")
-                builder.show()
+                gameOver(builder);
             }
             rivalPlayer.isWinner() -> {
                 builder.setTitle("Ganador: ${rivalPlayer.getAttribute(PlayerAttribute.NAME)}")
-                builder.show()
+                gameOver(builder);
             }
             localPlayer.getPositions().size + rivalPlayer.getPositions().size == 9 -> {
                 builder.setTitle("Empate")
-                builder.show()
+                gameOver(builder);
             }
         }
+    }
+
+    //Asigna un valor 2 que significa esperando al estado de los jugadores
+    private fun gameOver(builder: AlertDialog.Builder){
+        reset();
+        val data = hashMapOf(
+                "one_status" to 2,
+                "two_status" to 2,
+                "move" to 0
+        )
+        db.collection("games").document(code!!)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener {
+                    builder.show()
+                }.addOnFailureListener{ e ->
+                    finish();
+                    Snackbar.make(findViewById(android.R.id.content), "Ocurrio un error inesperado", Snackbar.LENGTH_LONG).show()
+                    Log.w("Error ", "Error adding document", e)
+                }
+    }
+
+    //Si el jugador elige jugar de nuevo o salir debe notificar al otro jugador
+    private fun gameOver(player: Player, status: Int){
+        var data = if(status==2){
+            if (player.getAttribute(PlayerAttribute.TOKEN)=="X") hashMapOf("one_status" to 1)
+            else hashMapOf("two_status" to 1)
+        }else{
+            if (player.getAttribute(PlayerAttribute.TOKEN)=="X") hashMapOf("one_status" to 0)
+            else hashMapOf("two_status" to 0)
+        }
+        db.collection("games").document(code!!)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener {
+                    if(status == 2) initPlayers();
+                    else finish();
+                }.addOnFailureListener{ e ->
+                    finish();
+                    Snackbar.make(findViewById(android.R.id.content), "Ocurrio un error inesperado", Snackbar.LENGTH_LONG).show()
+                    Log.w("Error ", "Error adding document", e)
+                }
     }
 
     private fun initGame(selectedBtn: ImageButton, view: View) {
@@ -160,6 +211,16 @@ class MainActivity : AppCompatActivity() {
         pos2.clear()
         localPlayer.setPositions(pos1)
         rivalPlayer.setPositions(pos2)
+    }
+
+    private fun exitGame(player: Player){
+        var numPlayer = if (player.getAttribute(PlayerAttribute.TOKEN) == "X") "one_status" else "two_status"
+        var data = hashMapOf(
+                numPlayer to 0
+            )
+
+        db.collection("games").document(code!!)
+                .set(data, SetOptions.merge())
     }
 
     private fun showTurn() {

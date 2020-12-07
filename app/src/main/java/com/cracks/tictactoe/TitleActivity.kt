@@ -36,7 +36,10 @@ class TitleActivity : AppCompatActivity() {
         val name = editTextName.text.toString().trim()
         val code = editTextCode.text.toString().trim()
         if (name.trim().isNotEmpty() && code.trim().isNotEmpty()) {
-            val data = hashMapOf("player_two" to name)
+            val data = hashMapOf(
+                    "player_two" to name,
+                    "two_status" to 1,
+                )
 
             db.collection("games").document("$code")
                 .set(data, SetOptions.merge())
@@ -58,8 +61,9 @@ class TitleActivity : AppCompatActivity() {
         if (name.trim().isNotEmpty() && code.trim().isNotEmpty()) {
             val game = hashMapOf(
                     "player_one" to name,
-                    "turn_of" to "X"
-            )
+                    "turn_of" to "X",
+                    "one_status" to 1
+                )
             db.collection("games")
                     .document("$code")
                     .set(game)
@@ -120,11 +124,9 @@ class TitleActivity : AppCompatActivity() {
                         deepLink = pendingDynamicLinkData.link
 
                         if (deepLink != null) {
-                            //val uniqueCode = deepLink.getQueryParameter("unique_code")
                             val gameCode = deepLink.getQueryParameter("code")
                             if (gameCode != null) {
                                 editTextCode.setText(gameCode)
-                                //this.uniqueCode = uniqueCode
                             }
                         }
                     } else {

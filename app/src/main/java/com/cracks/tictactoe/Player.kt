@@ -41,7 +41,6 @@ class Player {
 
     fun isWinner(): Boolean {
         for(position in positions) {
-            Log.println(Log.INFO, "A", "$position");
             if(position%3==0) if(positions.contains(position-1) && positions.contains(position-2)) return true
             if(position<4) if(positions.contains(position+3) && positions.contains(position+6)) return true
         }
