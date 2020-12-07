@@ -14,9 +14,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
     private var turn = "X"
-    private var localPlayer: Player = Player("Hunter", "X")
-    private var rivalPlayer: Player = Player("Morgana", "O")
+    private var localPlayer: Player = Player("Player 1", "X")
+    private var rivalPlayer: Player = Player("Player 2", "O")
     private var code: String? = null
+    var loadingDialog: LoadingDialog? = null;
     private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,8 +47,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayers() {
-        val loadingDialog = LoadingDialog(this, "Esperando respuesta del invitado...")
-        loadingDialog.startLoadingAnimation()
+        loadingDialog = LoadingDialog(this, "Esperando respuesta del invitado...")
+        loadingDialog!!.startLoadingAnimation()
 
         localPlayer.setAttribute(PlayerAttribute.NAME, intent.getStringExtra("player_name")!!)
         localPlayer.setAttribute(PlayerAttribute.TOKEN, intent.getStringExtra("player_type")!!)
@@ -68,12 +69,12 @@ class MainActivity : AppCompatActivity() {
                     if(localPlayer.getAttribute(PlayerAttribute.TOKEN) == "X") {
                         if(snapshot.data!!.containsKey("player_two") && snapshot.data?.get("two_status").toString() == "1") {
                             rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_two").toString())
-                            loadingDialog.dismiss()
+                            loadingDialog!!.dismiss()
                         }
                     } else {
                         if(snapshot.data!!.containsKey("player_one") && snapshot.data?.get("one_status").toString() == "1"){
                             rivalPlayer.setAttribute(PlayerAttribute.NAME, snapshot.data?.get("player_one").toString())
-                            loadingDialog.dismiss()
+                            loadingDialog!!.dismiss()
                         }
                     }
 
@@ -116,6 +117,7 @@ class MainActivity : AppCompatActivity() {
         builder.setMessage("¿Deseas volver a jugar?")
         builder.setPositiveButton("Sí") { _: DialogInterface, _: Int -> gameOver(localPlayer, 2) }
         builder.setNegativeButton("No") { _: DialogInterface, _: Int -> gameOver(localPlayer, 0) }
+        Log.println(Log.INFO, "COUNT", "Player one: ${localPlayer.getPositions().size}, Player two: ${rivalPlayer.getPositions().size}")
 
         when {
             localPlayer.isWinner() -> {
@@ -126,7 +128,7 @@ class MainActivity : AppCompatActivity() {
                 builder.setTitle("Ganador: ${rivalPlayer.getAttribute(PlayerAttribute.NAME)}")
                 gameOver(builder);
             }
-            localPlayer.getPositions().size + rivalPlayer.getPositions().size == 9 -> {
+            localPlayer.getPositions().size + rivalPlayer.getPositions().size > 8 -> {
                 builder.setTitle("Empate")
                 gameOver(builder);
             }
@@ -164,7 +166,7 @@ class MainActivity : AppCompatActivity() {
         db.collection("games").document(code!!)
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener {
-                    if(status == 2) initPlayers();
+                    if(status == 2) loadingDialog!!.startLoadingAnimation()
                     else finish();
                 }.addOnFailureListener{ e ->
                     finish();
@@ -191,26 +193,19 @@ class MainActivity : AppCompatActivity() {
                 }
     }
 
-    //TODO Este metodo debe validar que los dos jugadores esten listos para rejugar
     private fun reset() {
         val pos1 = localPlayer.getPositions()
         val pos2 = rivalPlayer.getPositions()
 
+        pos1.addAll(pos2);
         for(pos in pos1) {
             val btn = getBtnInstance(pos)
             btn?.isEnabled = true
             btn?.setImageResource(android.R.color.transparent)
         }
 
-        for(pos in pos2) {
-            val btn = getBtnInstance(pos)
-            btn?.isEnabled = true
-            btn?.setImageResource(android.R.color.transparent)
-        }
         pos1.clear()
         pos2.clear()
-        localPlayer.setPositions(pos1)
-        rivalPlayer.setPositions(pos2)
     }
 
     private fun exitGame(player: Player){
